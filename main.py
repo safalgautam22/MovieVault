@@ -1,14 +1,28 @@
 import os
 import requests
 import argparse
+import json
 from dotenv import load_dotenv
 
+load_dotenv()
+api_key = os.getenv("API_KEY")
 
+
+def movie_search(title):
+    url = "http://www.omdbapi.com/"
+    params = { 's':title, 'apikey': api_key }
+    response = requests.get(url, params=params)
+    response = response.json()
+    imdb_ids = []
+    for respond in response["Search"]:
+        print(f"Title: {respond['Title']} Year: {respond['Year']}")
+        imdb_ids.append(respond['imdbID'])
+    print(imdb_ids)
+    #  print(json.dumps(response, indent=4))
 
 def main():
 
-    load_dotenv()
-    api_key = os.getenv("API_KEY")
+    
     
     parser = argparse.ArgumentParser(description = "It is a CLI based programme to fetch movie data from IMDB data base and store them in vault")
 
@@ -35,6 +49,9 @@ def main():
     parser_remove.add_argument("--title", required=True, help="Title of movie")
 
     args = parser.parse_args()
+
+    if args.command == 'search':
+            movie_search(args.title)
     
 
 
