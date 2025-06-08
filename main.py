@@ -79,6 +79,18 @@ def add_movie(title, year):
     if not found:
         print("Data not matched")
 
+def remove(title):
+    response = details_title(title)
+    new_ids = []
+    for id in imdb_ids:
+        if id == response.get['imdbID']:
+            pass
+        new_ids.append(id)
+    with open(FILE, 'w') as file:
+        for id in new_ids:
+            file.write(f"{id}\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="🎥 CLI tool to search and fetch movie data from IMDb (via OMDb API)"
@@ -122,7 +134,8 @@ def main():
         for id in imdb_ids:
             get_movie_details(id)
 
-
+    elif args.command == "remove":
+        remove(args.title)
 
 
 if __name__ == "__main__":
