@@ -1,11 +1,23 @@
 import os
 import requests
 import argparse
+import csv
 from dotenv import load_dotenv
+
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
 url = "http://www.omdbapi.com/"
+FILE = "movies.bin"
+imdb_ids = []
+
+def load_movies():
+    try:
+        with open(FILE) as file:
+            return [line.strip() for line in file.readlines()]
+    except FileNotFoundError:
+        with open(FILE, 'w') as file:
+            return []
 
 def search_movies(title):
     params = {'s': title, 'apikey': api_key}
@@ -68,7 +80,8 @@ def main():
     parser_remove.add_argument("--title", required=True)
 
     args = parser.parse_args()
-
+    imdb_ids = load_movies()
+    
     if args.command == "search":
         imdb_ids = search_movies(args.title)
 
