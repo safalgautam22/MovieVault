@@ -1,7 +1,6 @@
 import os
 import requests
 import argparse
-import csv
 from dotenv import load_dotenv
 
 
@@ -22,16 +21,13 @@ def load_movies():
 def search_movies(title):
     params = {'s': title, 'apikey': api_key}
     response = requests.get(url, params=params).json()
-    imdb_ids = []
 
     if response.get("Response") == "True":
         for i, result in enumerate(response["Search"], start=1):
-            print(f"\n{i}.\tTitle: {result['Title']} \n\tYear: {result['Year']}")
+            print(f"{i}.\tTitle: {result['Title']} \n\tYear: {result['Year']}")
             imdb_ids.append(result["imdbID"])
-        return imdb_ids
     else:
         print(f"No results found for '{title}'")
-        return []
 
 def get_movie_details(imdb_id):
     params = {'i': imdb_id, 'apikey': api_key}
@@ -47,6 +43,17 @@ def get_movie_details(imdb_id):
         print(f"Plot        : {response.get('Plot', 'N/A')}\n")
     else:
         print(f"Could not fetch details for ID {imdb_id}")
+
+def get_movie(title, year):
+    params = {'s': title, 'apikey': api_key}
+    response = requests.get(url, params=params).json()
+
+    if response.get("Response") == "True":
+        for result in response['Search']:
+            if (result['Year'] == year):
+                get_movie_details(result['imdbID'])
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -81,9 +88,12 @@ def main():
 
     args = parser.parse_args()
     imdb_ids = load_movies()
-    
+
     if args.command == "search":
-        imdb_ids = search_movies(args.title)
+        search_movies(args.title)
+
+    elif args.command == "details":
+        get_movie(args.title, args.year)
 
 
 if __name__ == "__main__":
