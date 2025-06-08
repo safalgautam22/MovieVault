@@ -2,93 +2,119 @@ import os
 import requests
 import argparse
 from dotenv import load_dotenv
-
+import pickle
 
 load_dotenv()
 api_key = os.getenv("API_KEY")
 url = "http://www.omdbapi.com/"
-FILE = "movies.bin"
-imdb_ids = []
+FILE = "movies.bin" 
 
 def load_movies():
     try:
-        with open(FILE) as file:
-            return [line.strip() for line in file.readlines()]
+        with open(FILE, 'rb') as file:
+            return pickle.load(file)
     except FileNotFoundError:
-        with open(FILE, 'w') as file:
-            return []
+        return []
+
+def save_movies(ids):
+    with open(FILE, 'wb') as file:
+        pickle.dump(ids, file)
 
 def details_title(title):
     params = {'s': title, 'apikey': api_key}
-    return requests.get(url, params=params).json()
+    response = requests.get(url, params=params)
+    return response.json()
     
-def details_id(id):
-    params = {'i': id, 'apikey': api_key}
-    return  requests.get(url, params=params).json()
+def details_id(imdb_id):
+    params = {'i': imdb_id, 'apikey': api_key}
+    response = requests.get(url, params=params)
+    return response.json()
 
 def search_movies(title):
     response = details_title(title)
-
-    if response :
-        for i, result in enumerate(response["Search"], start=1):
-            print(f"{i}.\tTitle: {result['Title']} \n\tYear: {result['Year']}")
-            imdb_ids.append(result["imdbID"])
-    else:
+    if response.get('Response') == 'False':
         print(f"No results found for '{title}'")
+        return 
+
+    for i, result in enumerate(response["Search"], start=1):
+        print(f"{i}.\tTitle: {result['Title']} \n\tYear: {result['Year']}")
+    return 
+
 
 def get_movie_details(imdb_id):
     response = details_id(imdb_id)
-
-    if response:
-        print("\n🎬 Movie Details:\n")
-        print(f"Title       : {response.get('Title', 'N/A')}")
-        print(f"Year        : {response.get('Year', 'N/A')}")
-        print(f"Director    : {response.get('Director', 'N/A')}")
-        print(f"IMDb Rating : {response.get('imdbRating', 'N/A')}")
-        print(f"Genre       : {response.get('Genre', 'N/A')}")
-        print(f"Plot        : {response.get('Plot', 'N/A')}\n")
-    else:
+    if response.get('Response') == 'False':
         print(f"Could not fetch details for ID {imdb_id}")
+        return
+
+    print("\n🎬 Movie Details:\n")
+    print(f"Title       : {response.get('Title', 'N/A')}")
+    print(f"Year        : {response.get('Year', 'N/A')}")
+    print(f"Director    : {response.get('Director', 'N/A')}")
+    print(f"IMDb Rating : {response.get('imdbRating', 'N/A')}")
+    print(f"Genre       : {response.get('Genre', 'N/A')}")
+    print(f"Plot        : {response.get('Plot', 'N/A')}\n")
+
 
 def get_movie(title, year):
     response = details_title(title)
+    if response.get('Response') == 'False':
+        print("No results found")
+        return
 
-    if response:
-        for result in response['Search']:
-            if (result['Year'] == year):
-                get_movie_details(result['imdbID'])
+    for result in response['Search']:
+        if result['Year'] == year:
+            get_movie_details(result['imdbID'])
+            return
 
-    else:
-        print("Failed")
 
 def add_movie(title, year):
     response = details_title(title)
-    found = False
-    for respond in response['Search']:
-        if( respond['Year'] == year):
-            found = True
-            if respond['imdbID'] in imdb_ids:
-                print("Movie already exists")
-            else:
-                imdb_ids.append(respond['imdbID'])
-                with open(FILE , 'w') as file:
-                    for id in imdb_ids:
-                        file.write(f"{id}\n")
-                    print("Added Sucessfully")
-                    break
-    if not found:
-        print("Data not matched")
+    if response.get('Response') == 'False':
+        print("No results found for that title")
+        return
 
-def remove(title):
+    saved_ids = load_movies()
+    for result in response['Search']:
+        if result['Year'] == year:
+            if result['imdbID'] in saved_ids:
+                print("Movie already exists in your collection")
+            else:
+                saved_ids.append(result['imdbID'])
+                save_movies(saved_ids)
+                print("Added successfully")
+            return
+    print("No movie found matching that exact year")
+
+def remove_movie(title):
     response = details_title(title)
-    new_ids = []
-    for id in imdb_ids:
-        if id == response.get['imdbID']:
-            pass
-        new_ids.append(id)
-    with open(FILE, 'w') as file:
-        for id in new_ids:
-            file.write(f"{id}\n")
+    if response.get('Response') == 'False':
+        print("No results found for that title")
+        return
+
+    saved_ids = load_movies()
+    initial_count = len(saved_ids)
+    
+    # Remove all movies matching the title (there might be multiple)
+    removed_ids = [result['imdbID'] for result in response.get('Search', [])]
+    saved_ids = [id for id in saved_ids if id not in removed_ids]
+    
+    if len(saved_ids) < initial_count:
+        save_movies(saved_ids)
+        print(f"Removed {initial_count - len(saved_ids)} movie(s)")
+    else:
+        print("No matching movies found in your collection")
+   
+
+def list_movies():
+    saved_ids = load_movies()
+    if not saved_ids:
+        print("Your movie collection is empty")
+        return
+
+    for i, imdb_id in enumerate(saved_ids, start=1):
+        print(f"\nMovie #{i}:")
+        get_movie_details(imdb_id)
 
 
 def main():
@@ -112,31 +138,24 @@ def main():
     parser_add.add_argument("--year", required=True, help="Year of release of movie")
 
     # 'list' command
-    parser_list = sub_parser.add_parser("list", help="List all saved movies")
+    sub_parser.add_parser("list", help="List all saved movies")
 
     # 'remove' command
     parser_remove = sub_parser.add_parser("remove", help="Remove a saved movie")
-    parser_remove.add_argument("--title", required=True)
+    parser_remove.add_argument("--title", required=True, help="Title of movie to remove")
 
     args = parser.parse_args()
-    imdb_ids = load_movies()
 
     if args.command == "search":
         search_movies(args.title)
-
     elif args.command == "details":
         get_movie(args.title, args.year)
-
     elif args.command == "add":
         add_movie(args.title, args.year)
-
     elif args.command == "list":
-        for id in imdb_ids:
-            get_movie_details(id)
-
+        list_movies()
     elif args.command == "remove":
-        remove(args.title)
-
+        remove_movie(args.title)
 
 if __name__ == "__main__":
     main()
