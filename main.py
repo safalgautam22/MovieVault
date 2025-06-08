@@ -63,8 +63,10 @@ def get_movie(title, year):
 
 def add_movie(title, year):
     response = details_title(title)
-    for respond in response:
+    found = False
+    for respond in response['Search']:
         if( respond['Year'] == year):
+            found = True
             if respond['imdbID'] in imdb_ids:
                 print("Movie already exists")
             else:
@@ -72,8 +74,10 @@ def add_movie(title, year):
                 with open(FILE , 'w') as file:
                     for id in imdb_ids:
                         file.write(f"{id}\n")
-        else:
-            print("Data not matched")
+                    print("Added Sucessfully")
+                    break
+    if not found:
+        print("Data not matched")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -112,7 +116,13 @@ def main():
         get_movie(args.title, args.year)
 
     elif args.command == "add":
-        add_movie(args.title, args.director)
+        add_movie(args.title, args.year)
+
+    elif args.command == "list":
+        for id in imdb_ids:
+            get_movie_details(id)
+
+
 
 
 if __name__ == "__main__":
