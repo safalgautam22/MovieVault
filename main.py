@@ -158,17 +158,5 @@ def main():
         case "remove":
             remove_movie(args.title)
 
-
-    # if args.command == "search":
-    #     search_movies(args.title)
-    # elif args.command == "details":
-    #     get_movie(args.title, args.year)
-    # elif args.command == "add":
-    #     add_movie(args.title, args.year)
-    # elif args.command == "list":
-    #     list_movies()
-    # elif args.command == "remove":
-    #     remove_movie(args.title)
-
 if __name__ == "__main__":
     main()
